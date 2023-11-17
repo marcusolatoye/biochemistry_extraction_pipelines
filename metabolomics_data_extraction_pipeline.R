@@ -45,17 +45,17 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                                         'Mass List Match: Endogenous Metabolites database 4400 compounds',	
                                         'Mass List Match: Extractables and Leachables HRAM Compound Database', 
                                         "Area: b6.raw (F2)",	"Area: IS-4.raw (F8)", "Group CV [%]: Control", "Group CV [%]: Sample")
-              
-              
+                  
+                  
                   # Loop through all rep files
                   for(f in 1:length(list_input_filnames)){
                       
                       if (!require(openxlsx)) {
                           install.packages("openxlsx")
                       }
-                    
+                      
                       library(openxlsx)
-                    
+                      
                       print(paste("Reading input file:", list_input_filnames[f], sep=" "))
                       
                       #input_file = read.csv(paste(output_dir, list_input_filnames[f], sep=""), header = F, stringsAsFactors = F)
@@ -82,7 +82,7 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                       input_file[columns_to_convert] <- lapply(input_file[columns_to_convert], as.numeric)
                       # Create a concatenated column with MW and RT
                       input_file$RT_MW <- paste(round(input_file$`RT [min]`, 1), round(input_file$`Molecular Weight`, 3), sep='_')
-                    
+                      
                       input_file = input_file[order(input_file$`RT [min]`, input_file$`Molecular Weight`, decreasing = FALSE),]
                       
                       # Filter by the retention time threshold
@@ -102,7 +102,7 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                       head(input_file)
                       Standard_Chem_Name = '7-Hydroxycoumarine'
                       Standard_MWRT = c('6.3_162.03')  #, '6.3_162.031'
-           
+                      
                       stdrd_value_vec = c()
                       
                       non_area_colnames = c("File", "EXP", "TechRep", "RT_MW", "Chemical_Name", "Formula", "Molecular Weight", "RT [min]", "Area (Max.)", "MS2")
@@ -124,23 +124,23 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                               val = input_file[r, c]
                               est_standard = (val/stdrd_value) * 100
                               input_file[r, c] <- est_standard
-                          }
+                            }
                       }
                       
                       #write.table(input_file, paste(paste(output_dir, gsub('.csv', '', list_input_filnames[f]), sep=''), runner,'reformatted_data', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
                       
-                        # Extract string pattern before -1.raw, -2.raw, and -3.raw.
-                          for (col in area_colnames) {
-                              index <- which(names(input_file) == col)
-                              new_name <- sub("-[1-9]\\.raw.*$", "", col)
-                              names(input_file)[index] <- new_name
-                          }
+                      # Extract string pattern before -1.raw, -2.raw, and -3.raw.
+                      for (col in area_colnames) {
+                          index <- which(names(input_file) == col)
+                          new_name <- sub("-[1-9]\\.raw.*$", "", col)
+                          names(input_file)[index] <- new_name
+                      }
                       
                       output_file_null = rbind(output_file_null, input_file)
                       
                       # Reset input_file before going through the loop again
                       input_file=NULL
-                      
+                    
                   } # End of files loop
                   
                   # Write out all data
@@ -151,22 +151,22 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                   # Identify Compunds with complete three reps of RT_MW
                   # Install and load dplyr package in R
                   if (!require(dplyr)) {
-                    install.packages("dplyr")
-                  }
+                      install.packages("dplyr")
+                    }
                   library(dplyr)
                   
                   find_multiple_reps <- function(data, id_column) {
                     
-                        id_column <- ensym(id_column)
-                        
-                        ids_with_multiple_reps <- data %>%
-                          group_by(!!id_column) %>%
-                          summarise(rep_count = n()) %>%
-                          filter(rep_count = replications) %>%
-                          pull(!!id_column)
-                        
-                        data %>%
-                          filter(!!id_column %in% ids_with_multiple_reps)
+                    id_column <- ensym(id_column)
+                    
+                    ids_with_multiple_reps <- data %>%
+                      group_by(!!id_column) %>%
+                      summarise(rep_count = n()) %>%
+                      filter(rep_count = replications) %>%
+                      pull(!!id_column)
+                    
+                    data %>%
+                      filter(!!id_column %in% ids_with_multiple_reps)
                     
                   }
                   
@@ -177,8 +177,8 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                   output_file_three_reps = output_file_three_reps[order(output_file_three_reps$RT_MW),]
                   write.xlsx(output_file_three_reps, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_three_reps', date_time_stamp, 'xlsx', sep='.'), rowNames = FALSE)
                   #write.table(output_file_three_reps, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_three_reps', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
-              
-              }
+                  
+}
 
 
 
