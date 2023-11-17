@@ -162,7 +162,7 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                     ids_with_multiple_reps <- data %>%
                       group_by(!!id_column) %>%
                       summarise(rep_count = n()) %>%
-                      filter(rep_count = replications) %>%
+                      filter(rep_count == as.numeric(as.character(replications))) %>%
                       pull(!!id_column)
                     
                     data %>%
