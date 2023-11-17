@@ -17,10 +17,10 @@ shinyUI(fluidPage(
       textInput("directory", "Directory Path Format \n C:/Users/username/OneDrive - J.R. Simplot Company/Documents", value = ""),
       textInput("runner", "Runner", value = ""),
       textInput("experiment", "Experiment", value = ""),
-      fileInput("files", "Upload CSV Files", multiple = TRUE),
+      fileInput("files", "Upload Excel Files", multiple = TRUE),
       #textInput("file_names", "File Names (comma-separated, no space)", value = ""),
       textInput("time_value", "Time Point", value = ""),
-      textInput("replications", "Number of Reps", value = ""),
+      textInput("replications", "Numeric Value Of Reps To Keep", value = ""),
       actionButton("analyze", "Submit"),
       actionButton("exit", "Exit")
     ),
