@@ -4,7 +4,7 @@ shinyUI(fluidPage(
   tags$style(HTML("
     .sidebar {
       width: 350px; /* Adjust the width to your preference */
-      background-color: #DAA520; /* Set your desired color here #f8f9fa */
+      background-color: #DAA520; /* Set your desired color here #f8f9fagit  */
     }
     .main {
       margin-left: 360px; /* Adjust the margin to make room for the wider sidebar */
