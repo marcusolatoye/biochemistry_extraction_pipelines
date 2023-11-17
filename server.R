@@ -9,6 +9,7 @@ shinyServer(function(input, output, session) {
                 runner = runner
                 list_input_filnames = file_names
                 time_threshold = as.numeric(as.character(time_value))
+                compound_reps = as.numeric(as.character(replications))
                 # Set Date and Time
                 current_datetime <- Sys.time()
                 date_time_stamp <- format(current_datetime, "%Y%m%d%H%M%S")
@@ -146,7 +147,7 @@ shinyServer(function(input, output, session) {
                 ids_with_multiple_reps <- data %>%
                     group_by(!!id_column) %>%
                     summarise(rep_count = n()) %>%
-                    filter(rep_count == as.numeric(as.character(replications))) %>%
+                    filter(rep_count = compound_reps) %>%
                     pull(!!id_column)
                 
                 data %>%
