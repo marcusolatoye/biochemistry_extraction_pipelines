@@ -1,22 +1,24 @@
 # Set current working directory
 rm(list=ls())
-setwd("~/2023/Biochemistry/extraction_app/")
+setwd("~/2023/Biochemistry/")  #extraction_app/
 
 # Store current working directory as a variable
 cwd = getwd()
 
-#directory_path = cwd
+directory_path = cwd
 
-#time_value = 16
+time_value = 16
+
+replications = 3
 
 #file_names = c('CY22_051_CW_metabolomic_analysis_MOO_TR1.csv', 'CY22_051_CW_metabolomic_analysis_MOO_TR2.csv', 'CY22_051_CW_metabolomic_analysis_MOO_TR3.csv')
+file_names = c('CY22_051_CW_metabolomic_analysis_MOO_TR1.xlsx', 'CY22_051_CW_metabolomic_analysis_MOO_TR2.xlsx', 'CY22_051_CW_metabolomic_analysis_MOO_TR3.xlsx')
+experiment='CY22_051'
 
-#experiment='CY22_051'
-
-#runner='Aaron'
+runner='Aaron'
 
 
-data_extractor <- function(directory_path, experiment, runner, file_names, time_value){
+data_extractor <- function(directory_path, experiment, runner, file_names, time_value, replications){
   
                   output_dir = paste(directory_path,'/', sep='')
                   exp_name = experiment
@@ -41,14 +43,25 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                                         'Mass List Match: Arita Lab 6549 Flavonoid Structure Database',	
                                         'Mass List Match: EFS HRAM Compound Database',	
                                         'Mass List Match: Endogenous Metabolites database 4400 compounds',	
-                                        'Mass List Match: Extractables and Leachables HRAM Compound Database')
-              
-              
+                                        'Mass List Match: Extractables and Leachables HRAM Compound Database', 
+                                        "Area: b6.raw (F2)",	"Area: IS-4.raw (F8)", "Group CV [%]: Control", "Group CV [%]: Sample")
+                  
+                  
                   # Loop through all rep files
                   for(f in 1:length(list_input_filnames)){
-                    
+                      
+                      if (!require(openxlsx)) {
+                          install.packages("openxlsx")
+                      }
+                      
+                      library(openxlsx)
+                      
                       print(paste("Reading input file:", list_input_filnames[f], sep=" "))
-                      input_file = read.csv(paste(output_dir, list_input_filnames[f], sep=""), header = F, stringsAsFactors = F)
+                      
+                      #input_file = read.csv(paste(output_dir, list_input_filnames[f], sep=""), header = F, stringsAsFactors = F)
+                      input_file <- read.xlsx(paste(output_dir, list_input_filnames[f], sep=""), colNames = FALSE)
+                      head(input_file)
+                      
                       
                       names_vec = as.vector(as.character(input_file[1,])) # Extract the first row of the dataframe as name vector
                       names_vec
@@ -68,11 +81,16 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                       columns_to_convert = names(input_file)[! names(input_file) %in% columns_notto_convert] 
                       input_file[columns_to_convert] <- lapply(input_file[columns_to_convert], as.numeric)
                       # Create a concatenated column with MW and RT
-                      input_file$`Name (MW_RT)` <- paste(round(input_file$`Molecular Weight`, 1), 
-                                                         round(input_file$`RT [min]`, 2), sep='_')
-                    
-                      input_file = input_file[order(input_file$`Molecular Weight`, input_file$`RT [min]`, decreasing = FALSE),]
+                      input_file$RT_MW <- paste(round(input_file$`RT [min]`, 1), round(input_file$`Molecular Weight`, 3), sep='_')
+                      
+                      input_file = input_file[order(input_file$`RT [min]`, input_file$`Molecular Weight`, decreasing = FALSE),]
+                      
+                      # Filter by the retention time threshold
                       input_file = input_file[which(input_file$`RT [min]` < time_threshold),]
+                      
+                      # Filter by only chemicals with MS column having DDA for preferred ion
+                      input_file = input_file[which(input_file$MS2 == 'DDA for preferred ion'),]
+                      
                       input_file$TechRep <- rep(f, nrow(input_file))
                       input_file$EXP = rep(exp_name, nrow(input_file))
                       input_file$File = rep(list_input_filnames[f], nrow(input_file))
@@ -83,51 +101,84 @@ data_extractor <- function(directory_path, experiment, runner, file_names, time_
                       input_file = input_file[,c(ncol(input_file),(ncol(input_file)-1),(ncol(input_file)-2),(ncol(input_file)-3),2:(ncol(input_file)-4))]
                       head(input_file)
                       Standard_Chem_Name = '7-Hydroxycoumarine'
-                      Standard_MWRT = c('162_6.3', '162_6.31', '162_6.32', '162_6.33')  #162.03046  6.327   #162.03045 6.322
-           
+                      Standard_MWRT = c('6.3_162.03')  #, '6.3_162.031'
+                      
                       stdrd_value_vec = c()
                       
-                      non_area_colnames = c("File", "EXP", "TechRep", "Name (MW_RT)", "Chemical_Name", "Formula", "Molecular Weight", "RT [min]", "Area (Max.)", "MS2", "Area: b6.raw (F2)",	"Area: IS-4.raw (F8)", "Group CV [%]: Control", "Group CV [%]: Sample")
+                      non_area_colnames = c("File", "EXP", "TechRep", "RT_MW", "Chemical_Name", "Formula", "Molecular Weight", "RT [min]", "Area (Max.)", "MS2")
                       area_colnames = colnames(input_file)[!colnames(input_file) %in% non_area_colnames]
                       counter = 1
                       
+                      # Loop through all environments
                       for(c in area_colnames){
                         
                           print(paste('Trait being processed is: ', c, ' for file: ', list_input_filnames[f], sep=''))
-                          stdrd_value = input_file[((input_file$Chemical_Name == Standard_Chem_Name) & (input_file$`Name (MW_RT)` %in% Standard_MWRT)),c]
+                          stdrd_value = input_file[((input_file$Chemical_Name == Standard_Chem_Name) & (input_file$RT_MW %in% Standard_MWRT)),c]
                           print(paste('Standard value for column ', c, 'is: ', stdrd_value, sep=''))
                           stdrd_value_vec[counter] = stdrd_value
                           
                           counter = counter + 1
-                          
+                          # Loop through all rows
                           for(r in 1:nrow(input_file)){
                               print(paste('File: ', list_input_filnames[f],'; Column: ', c, '; Row: ', r, sep=""))
                               val = input_file[r, c]
                               est_standard = (val/stdrd_value) * 100
                               input_file[r, c] <- est_standard
-                          }
+                            }
                       }
                       
-                      write.table(input_file, paste(paste(output_dir, gsub('.csv', '', list_input_filnames[f]), sep=''), runner,'reformatted_data', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
+                      #write.table(input_file, paste(paste(output_dir, gsub('.csv', '', list_input_filnames[f]), sep=''), runner,'reformatted_data', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
                       
-                        # Extract string pattern before -1.raw, -2.raw, and -3.raw.
-                          for (col in area_colnames) {
-                              index <- which(names(input_file) == col)
-                              new_name <- sub("-[1-9]\\.raw.*$", "", col)
-                              names(input_file)[index] <- new_name
-                          }
+                      # Extract string pattern before -1.raw, -2.raw, and -3.raw.
+                      for (col in area_colnames) {
+                          index <- which(names(input_file) == col)
+                          new_name <- sub("-[1-9]\\.raw.*$", "", col)
+                          names(input_file)[index] <- new_name
+                      }
                       
                       output_file_null = rbind(output_file_null, input_file)
                       
                       # Reset input_file before going through the loop again
                       input_file=NULL
+                    
+                  } # End of files loop
+                  
+                  # Write out all data
+                  
+                  write.xlsx(output_file_null, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_all', date_time_stamp, 'xlsx', sep='.'), rowNames = FALSE)
+                  #write.table(output_file_null, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_all', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
+                  
+                  # Identify Compunds with complete three reps of RT_MW
+                  # Install and load dplyr package in R
+                  if (!require(dplyr)) {
+                      install.packages("dplyr")
+                    }
+                  library(dplyr)
+                  
+                  find_multiple_reps <- function(data, id_column) {
+                    
+                    id_column <- ensym(id_column)
+                    
+                    ids_with_multiple_reps <- data %>%
+                      group_by(!!id_column) %>%
+                      summarise(rep_count = n()) %>%
+                      filter(rep_count = replications) %>%
+                      pull(!!id_column)
+                    
+                    data %>%
+                      filter(!!id_column %in% ids_with_multiple_reps)
+                    
                   }
                   
+                  # Identify IDs with multiple repetitions in the "RT_MW" column
+                  output_file_three_reps <- find_multiple_reps(output_file_null, RT_MW)
+                  
                   #Export a CSV file out
-                  output_file_null = output_file_null[order(output_file_null$`Molecular Weight`, output_file_null$`RT [min]`, output_file_null$TechRep),]
-                  write.table(output_file_null, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
-              
-              }
+                  output_file_three_reps = output_file_three_reps[order(output_file_three_reps$RT_MW),]
+                  write.xlsx(output_file_three_reps, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_three_reps', date_time_stamp, 'xlsx', sep='.'), rowNames = FALSE)
+                  #write.table(output_file_three_reps, paste(paste(output_dir,exp_name, sep=''), runner,'reformatted_data_three_reps', date_time_stamp, 'csv', sep='.'), sep=",", quote=F, row.names=F, col.names = T)
+                  
+}
 
 
 
